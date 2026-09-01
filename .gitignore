@@ -1,0 +1,12 @@
+node_modules/
+dist/
+managed/
+.env
+.env.*
+!.env.example
+deployments/*.local.json
+frontend/.next/
+frontend/node_modules/
+coverage/
+*.log
+.DS_Store

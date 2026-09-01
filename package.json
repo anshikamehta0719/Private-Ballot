@@ -1,0 +1,35 @@
+{
+  "name": "midnight-private-ballot",
+  "version": "0.1.0",
+  "description": "Anonymous ballots with publicly verifiable tallies, built on Midnight (Compact).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "compact": "compactc src/private-ballot.compact managed/private-ballot",
+    "build": "npm run compact && tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . --ext .ts,.tsx",
+    "deploy": "tsx scripts/deploy.ts",
+    "dust-probe": "tsx scripts/dust-probe.ts",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "eslint": "^8.57.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "^0.8.0",
+    "@midnight-ntwrk/midnight-js-contracts": "^1.0.0",
+    "@midnight-ntwrk/midnight-js-network-id": "^1.0.0",
+    "@midnight-ntwrk/wallet": "^4.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
