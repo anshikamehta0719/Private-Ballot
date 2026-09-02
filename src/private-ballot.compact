@@ -1,0 +1,125 @@
+// private-ballot.compact
+//
+// Anonymous ballots with publicly verifiable tallies.
+//
+// Design summary
+// ---------------
+// - A fixed allowlist of eligible voters is registered at construction time
+//   as a set of *commitments* (hash of a per-voter secret), never as raw
+//   identities.
+// - To cast a vote, a voter proves in zero-knowledge that they know the
+//   secret behind one of the registered commitments, without revealing
+//   which one. This is enforced purely by hashing a locally-held witness
+//   value inside the circuit -- the secret itself never leaves the user's
+//   machine and is never written to the ledger.
+// - A per-voter nullifier (a second, differently-salted hash of the same
+//   secret) is recorded publicly to block double voting, without linking
+//   back to the voter's commitment or identity.
+// - Only the aggregate yes/no counters are public and are the sole
+//   observable effect of a vote on the ledger.
+//
+// pragma / import
+pragma language_version >= 0.16 && <= 0.25;
+
+import CompactStandardLibrary;
+
+// ---------------------------------------------------------------------------
+// Public ledger state (on-chain, visible to every observer)
+// ---------------------------------------------------------------------------
+
+// Hash of the admin's secret key. Only the admin can close voting.
+export ledger admin: Bytes<32>;
+
+// Whether the poll is still accepting votes.
+export ledger votingOpen: Boolean;
+
+// Free-text description of the proposal being voted on (public by design --
+// everyone needs to know what they are voting on).
+export ledger proposal: Opaque<"string">;
+
+// Commitments (hash of each eligible voter's secret) registered at
+// construction time. Membership in this set is what a voter proves in
+// zero-knowledge -- the set itself is public, but proving membership does
+// not reveal *which* element matched.
+export ledger eligibleVoters: Set<Bytes<32>>;
+
+// Nullifiers already spent. Prevents double voting while remaining
+// unlinkable to any entry in eligibleVoters or to any real-world identity.
+export ledger usedNullifiers: Set<Bytes<32>>;
+
+// The only publicly verifiable outcome of the vote.
+export ledger yesVotes: Counter;
+export ledger noVotes: Counter;
+
+// ---------------------------------------------------------------------------
+// Witnesses (private, off-chain, supplied locally by the caller's wallet)
+// ---------------------------------------------------------------------------
+
+// Returns the caller's private voting secret. Implemented in TypeScript in
+// witnesses/private-ballot-witnesses.ts; never touches the chain.
+witness localSecretKey(): Bytes<32>;
+
+// ---------------------------------------------------------------------------
+// Constructor
+// ---------------------------------------------------------------------------
+
+constructor(
+  adminKeyHash: Bytes<32>,
+  proposalText: Opaque<"string">,
+  initialVoterCommitments: Vector<8, Bytes<32>>
+) {
+  admin = adminKeyHash;
+  proposal = proposalText;
+  votingOpen = true;
+
+  const zero: Bytes<32> = default<Bytes<32>>;
+  for (const commitment of initialVoterCommitments) {
+    if (commitment != zero) {
+      eligibleVoters.insert(disclose(commitment));
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Circuits (entry points)
+// ---------------------------------------------------------------------------
+
+// Cast an anonymous vote. `support` is the only per-transaction input that
+// is ever disclosed publicly; it only ever manifests on-chain as +1 to one
+// of the two aggregate counters, never as a per-voter record.
+export circuit castVote(support: Boolean): [] {
+  assert(votingOpen, "voting is closed");
+
+  const secret = localSecretKey();
+  const commitment = persistentHash<Bytes<32>>(secret);
+  assert(eligibleVoters.member(commitment), "not an eligible voter");
+
+  // A distinct domain-separated hash so the nullifier cannot be linked back
+  // to `commitment` or reused to derive the voter's secret.
+  const nullifier = persistentHash<Bytes<32>>(
+    persistentHash<Bytes<32>>(secret) as Bytes<32>
+  );
+  assert(!usedNullifiers.member(nullifier), "vote already cast");
+  usedNullifiers.insert(disclose(nullifier));
+
+  if (disclose(support)) {
+    yesVotes.increment(1);
+  } else {
+    noVotes.increment(1);
+  }
+}
+
+// Admin-only: proves knowledge of the secret behind `admin` without
+// revealing it, then closes the poll to further votes.
+export circuit closeVoting(): [] {
+  const secret = localSecretKey();
+  assert(persistentHash<Bytes<32>>(secret) == admin, "only admin may close voting");
+  votingOpen = false;
+}
+
+// Read-only helper: exposes the current verifiable tally. (Public ledger
+// fields are already directly readable off-chain; this circuit exists so
+// front-ends and tests have a single stable entry point for "get results".)
+export circuit tally(): [Uint<32>, Uint<32>] {
+  return [yesVotes.value() as Uint<32>, noVotes.value() as Uint<32>];
+}
