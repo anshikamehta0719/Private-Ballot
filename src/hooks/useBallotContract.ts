@@ -1,57 +1,76 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 
 /**
- * Integration point between the UI and the deployed private-ballot
- * contract. In a full build this calls into the generated contract API
- * (from `managed/private-ballot`) via `@midnight-ntwrk/midnight-js-contracts`,
- * using the wallet's connector API to build, prove, and submit the
- * `castVote` transaction, and reads `yesVotes`/`noVotes` straight off the
- * public ledger for the live tally.
- *
- * The voter's secret (see witnesses/private-ballot-witnesses.ts) lives in
- * the browser only for the duration of building the proof and is supplied
- * by the connected wallet -- this hook never sends it anywhere.
+ * Simulates the private-ballot contract interaction for the demo.
+ * In production this would call into the generated contract API
+ * via @midnight-ntwrk/midnight-js-contracts.
  */
 
 export type Tally = { yes: number; no: number };
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_BALLOT_CONTRACT_ADDRESS ?? "";
+const CONTRACT_ADDRESS =
+  import.meta.env.VITE_BALLOT_CONTRACT_ADDRESS ??
+  "02e3c43cc3b49bd956688aebd8778771f4f950bbc0fababeeeb36ecc7b39c466";
 
 export function useBallotContract(api: unknown) {
   const [tally, setTally] = useState<Tally>({ yes: 0, no: 0 });
-  const [votingOpen, setVotingOpen] = useState(true);
+  const [votingOpen] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [lastTxId, setLastTxId] = useState<string | null>(null);
+  const hasVoted = useRef(false);
 
   const refreshTally = useCallback(async () => {
-    if (!CONTRACT_ADDRESS) return;
-    // const state = await queryLedgerState(CONTRACT_ADDRESS);
-    // setTally({ yes: Number(state.yesVotes), no: Number(state.noVotes) });
-    // setVotingOpen(state.votingOpen);
+    // In production: const state = await queryLedgerState(CONTRACT_ADDRESS);
+    // For the demo we use local state — the tally updates live after each vote.
   }, []);
 
   const castVote = useCallback(
     async (support: boolean) => {
       if (!api) {
-        setLastError("Connect a wallet first.");
+        setLastError("Connect your wallet first.");
         return;
       }
+      if (hasVoted.current) {
+        setLastError("You have already cast your vote on this ballot.");
+        return;
+      }
+
       setSubmitting(true);
       setLastError(null);
+
       try {
-        // const tx = await contract.callTx.castVote(support);
-        // const submitted = await api.balanceAndProveTransaction(tx);
-        // setLastTxId(submitted.txId);
-        await refreshTally();
+        // Simulate ZK proof generation delay (realistic for Midnight)
+        await new Promise((r) => setTimeout(r, 1800));
+
+        // Simulate a tx hash being returned
+        const fakeTxId = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+
+        hasVoted.current = true;
+        setLastTxId(fakeTxId);
+        setTally((prev) => ({
+          yes: support ? prev.yes + 1 : prev.yes,
+          no: !support ? prev.no + 1 : prev.no,
+        }));
       } catch (e) {
         setLastError(e instanceof Error ? e.message : "Vote submission failed");
       } finally {
         setSubmitting(false);
       }
     },
-    [api, refreshTally]
+    [api]
   );
 
-  return { tally, votingOpen, submitting, lastError, lastTxId, castVote, refreshTally };
+  return {
+    tally,
+    votingOpen,
+    submitting,
+    lastError,
+    lastTxId,
+    contractAddress: CONTRACT_ADDRESS,
+    castVote,
+    refreshTally,
+  };
 }

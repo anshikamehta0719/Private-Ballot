@@ -131,3 +131,30 @@ button:disabled {
   color: var(--yes);
   word-break: break-all;
 }
+
+.voted-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: rgba(76, 175, 125, 0.1);
+  border: 1px solid rgba(76, 175, 125, 0.3);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  margin: 1rem 0;
+  color: var(--yes);
+}
+
+.voted-check {
+  font-size: 1.6rem;
+}
+
+.wallet-address {
+  font-size: 0.75rem;
+  color: #9aa0b4;
+  font-family: monospace;
+  background: #0d1020;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 2px;
+}
+
