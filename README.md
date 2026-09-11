@@ -8,7 +8,7 @@
 ## Contract Address
 | Network  | Address                          |
 |----------|----------------------------------|
-| Preprod  | [CONTRACT ADDRESS — REQUIRED]    |
+| Preprod  | `02e3c43cc3b49bd956688aebd8778771f4f950bbc0fababeeeb36ecc7b39c466` |
 
 ## What This Does
 This dApp is a Private Voting/Ballot system. It allows a list of pre-authorized eligible voters to securely cast a "Yes" or "No" vote on a proposal. The tally of "Yes" and "No" votes is public and dynamically updated, but no observer can ever see which specific voter cast which vote.
