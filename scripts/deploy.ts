@@ -2,13 +2,7 @@ import "dotenv/config";
 import { writeFileSync, mkdirSync } from "node:fs";
 import * as crypto from "node:crypto";
 import { commitmentFor, generateVoterSecret, toHex } from "../witnesses/commitments.js";
-import { Contract } from "../managed/private-ballot/contract/index.js";
-import { privateBallotWitnesses } from "../witnesses/private-ballot-witnesses.js";
 
-// Midnight SDK imports
-import { createWallet, createWalletFromMnemonic } from "@midnight-ntwrk/wallet";
-import { deployContract } from "@midnight-ntwrk/midnight-js-contracts";
-import { NetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 
 async function main() {
   const network = (process.env.MIDNIGHT_NETWORK ?? "preprod").toLowerCase();
