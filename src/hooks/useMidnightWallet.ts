@@ -1,33 +1,33 @@
 import { useCallback, useState } from "react";
 
 /**
- * Thin wrapper around the injected Midnight wallet connector (e.g. Lace or
- * 1AM). Exposes just enough surface for this dApp: connect, the connected
- * address, and the underlying API object the contract-interaction hook
- * needs to build + submit proofs.
- *
- * The exact injected global differs by wallet extension; both Lace and 1AM
- * follow the DApp Connector API shape documented at
- * docs.midnight.network/develop/reference/midnight-api/dapp-connector-api.
- * Swap `resolveInjectedConnector` below for whichever wallet you target.
+ * Thin wrapper around the injected Midnight wallet connector (Lace / 1AM).
+ * The Lace Midnight DApp Connector API injects into window.midnight.lace.
+ * Calling .enable() on it returns an API object with methods like
+ * balanceAndProveTransaction.
  */
 
 type MidnightConnectorApi = {
-  enable: () => Promise<MidnightConnectorApi>;
-  state: () => Promise<{ address: string }>;
+  enable?: () => Promise<MidnightConnectorApi>;
+  state?: () => Promise<{ address: string }>;
+  getState?: () => Promise<{ address: string; coinPublicKey?: string }>;
   balanceAndProveTransaction?: unknown;
 };
 
 declare global {
   interface Window {
-    midnight?: Record<string, { enable: () => Promise<MidnightConnectorApi> }>;
+    midnight?: Record<string, MidnightConnectorApi>;
   }
 }
 
-function resolveInjectedConnector(): (() => Promise<MidnightConnectorApi>) | null {
+function resolveProvider(): MidnightConnectorApi | null {
   if (typeof window === "undefined" || !window.midnight) return null;
-  const provider = window.midnight.lace ?? window.midnight["1am"] ?? Object.values(window.midnight)[0];
-  return provider ? () => provider.enable() : null;
+  return (
+    window.midnight["lace"] ??
+    window.midnight["1am"] ??
+    Object.values(window.midnight)[0] ??
+    null
+  );
 }
 
 export function useMidnightWallet() {
@@ -38,17 +38,39 @@ export function useMidnightWallet() {
 
   const connect = useCallback(async () => {
     setError(null);
-    const enable = resolveInjectedConnector();
-    if (!enable) {
-      setError("No Midnight wallet extension found. Install Lace or 1AM and reload.");
+    const provider = resolveProvider();
+
+    if (!provider) {
+      setError(
+        "No Midnight wallet found. Install the Lace extension, set it to Preprod network, and reload."
+      );
       return;
     }
+
     setConnecting(true);
     try {
-      const connected = await enable();
-      const { address } = await connected.state();
-      setApi(connected);
-      setAddress(address);
+      let connectedApi: MidnightConnectorApi;
+
+      // Lace uses .enable() to grant access and return an API object
+      if (typeof provider.enable === "function") {
+        connectedApi = await provider.enable();
+      } else {
+        // Some connector versions expose the API directly without enable()
+        connectedApi = provider;
+      }
+
+      // Try to get the wallet address
+      let walletAddress = "connected";
+      if (typeof connectedApi.getState === "function") {
+        const state = await connectedApi.getState();
+        walletAddress = state.address ?? state.coinPublicKey ?? "connected";
+      } else if (typeof connectedApi.state === "function") {
+        const state = await connectedApi.state();
+        walletAddress = state.address ?? "connected";
+      }
+
+      setApi(connectedApi);
+      setAddress(walletAddress);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to connect wallet");
     } finally {
