@@ -22,7 +22,9 @@ declare global {
 
 function resolveProvider(): MidnightConnectorApi | null {
   if (typeof window === "undefined" || !window.midnight) return null;
+  // Lace Midnight extension injects as window.midnight.mnLace
   return (
+    window.midnight["mnLace"] ??
     window.midnight["lace"] ??
     window.midnight["1am"] ??
     Object.values(window.midnight)[0] ??

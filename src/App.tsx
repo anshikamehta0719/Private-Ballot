@@ -31,7 +31,15 @@ export default function App() {
       </main>
 
       <footer className="muted">
-        Contract address: {import.meta.env.VITE_BALLOT_CONTRACT_ADDRESS || "not deployed yet"}
+        Contract:{" "}
+        <a
+          href={`https://midnight-explorer.preprod.midnight.network/contract/02e3c43cc3b49bd956688aebd8778771f4f950bbc0fababeeeb36ecc7b39c466`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "var(--accent)", fontFamily: "monospace", fontSize: "0.78rem" }}
+        >
+          02e3c43cc3b49…b39c466
+        </a>
       </footer>
     </div>
   );
