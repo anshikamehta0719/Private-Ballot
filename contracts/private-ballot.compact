@@ -117,9 +117,3 @@ export circuit closeVoting(): [] {
   votingOpen = false;
 }
 
-// Read-only helper: exposes the current verifiable tally. (Public ledger
-// fields are already directly readable off-chain; this circuit exists so
-// front-ends and tests have a single stable entry point for "get results".)
-export circuit tally(): [Uint<32>, Uint<32>] {
-  return [yesVotes.value() as Uint<32>, noVotes.value() as Uint<32>];
-}
