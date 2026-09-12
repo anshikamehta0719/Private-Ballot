@@ -3,6 +3,7 @@ import { useBallotContract } from "./hooks/useBallotContract";
 import { WalletConnect } from "./components/WalletConnect";
 import { VoteForm } from "./components/VoteForm";
 import { TallyDisplay } from "./components/TallyDisplay";
+import { DeployContract } from "./components/DeployContract";
 
 export default function App() {
   const wallet = useMidnightWallet();
@@ -28,6 +29,9 @@ export default function App() {
           lastTxId={ballot.lastTxId}
         />
         <TallyDisplay tally={ballot.tally} />
+        
+        {/* Real on-chain deployment flow using Lace wallet provider */}
+        <DeployContract walletApi={wallet.api} />
       </main>
 
       <footer className="muted">
