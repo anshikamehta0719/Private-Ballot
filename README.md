@@ -5,7 +5,7 @@
 ## Live Demo
 [Live URL]
 
-## Contract Address
+## Preprod Contract Address
 | Network  | Address                          |
 |----------|----------------------------------|
 | Preprod  | `02e3c43cc3b49bd956688aebd8778771f4f950bbc0fababeeeb36ecc7b39c466` |
