@@ -68,14 +68,15 @@ constructor(
   proposalText: Opaque<"string">,
   initialVoterCommitments: Vector<8, Bytes<32>>
 ) {
-  admin = adminKeyHash;
-  proposal = proposalText;
+  admin = disclose(adminKeyHash);
+  proposal = disclose(proposalText);
   votingOpen = true;
 
   const zero: Bytes<32> = default<Bytes<32>>;
   for (const commitment of initialVoterCommitments) {
-    if (commitment != zero) {
-      eligibleVoters.insert(disclose(commitment));
+    const revealed = disclose(commitment);
+    if (revealed != zero) {
+      eligibleVoters.insert(revealed);
     }
   }
 }
@@ -92,14 +93,14 @@ export circuit castVote(support: Boolean): [] {
 
   const secret = localSecretKey();
   const commitment = persistentHash<Bytes<32>>(secret);
-  assert(eligibleVoters.member(commitment), "not an eligible voter");
+  assert(eligibleVoters.member(disclose(commitment)), "not an eligible voter");
 
   // A distinct domain-separated hash so the nullifier cannot be linked back
   // to `commitment` or reused to derive the voter's secret.
   const nullifier = persistentHash<Bytes<32>>(
     persistentHash<Bytes<32>>(secret) as Bytes<32>
   );
-  assert(!usedNullifiers.member(nullifier), "vote already cast");
+  assert(!usedNullifiers.member(disclose(nullifier)), "vote already cast");
   usedNullifiers.insert(disclose(nullifier));
 
   if (disclose(support)) {
